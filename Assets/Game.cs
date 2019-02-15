@@ -29,7 +29,7 @@ public class Game : MonoBehaviour
         if (RenderMaterial == null)
             return;
 
-        int xres = 320;
+        int xres = 400;
         int yres = (xres * Screen.height) / Screen.width;
 
         RenderMaterial.SetFloat("_MyTime", m_time);

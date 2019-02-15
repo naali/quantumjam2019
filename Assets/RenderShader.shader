@@ -37,7 +37,7 @@ CGPROGRAM
 #define mix lerp
 vec2 mul2x2(mat2 m, vec2 p) { return mul(m, p); }
 vec3 mul3x3(mat3 m, vec3 p) { return mul(m, p); }
-float _atan(float x, float y) { return atan2(y, x); }
+float _atan(float x, float y) { return atan2(abs(y), x); } // ??? Not sure about the abs() but seems to match!
 // Shadertoy definitions
 vec2 iResolution;
 float iTime;
