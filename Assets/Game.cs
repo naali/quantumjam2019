@@ -20,6 +20,8 @@ public class Game : MonoBehaviour
     {
         m_time += Time.deltaTime;
         ++m_frame_count;
+
+        m_time += Input.GetAxis("Horizontal") * 5.0f;
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
