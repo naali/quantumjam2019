@@ -16,6 +16,7 @@ CGPROGRAM
 			int _Frame;
 
 			float _WheelPos; // Every integer is at "position"
+			float _WheelExplosion; // 0 (intact) -> ...
 			float _PlugOffset; // 0-1, 1 is attached
 			float _PlugOrientation; // 0-1
 
@@ -58,7 +59,7 @@ float _atan(float x, float y) { return atan(x, y); }
 
 // Uses code (MIT) from Inigo Quilez -- https://www.shadertoy.com/view/Xds3zN
 
-#define AA 1   // make this 2 or 3 for antialiasing
+#define AA 2   // make this 2 or 3 for antialiasing
 
 
 //------------------------------------------------------------------
@@ -331,55 +332,57 @@ vec3 opTwist(vec3 p)
 
 //------------------------------------------------------------------
 
-vec2 map_IQ(in vec3 pos)
+float s2dCircle(in vec2 p, float r)
 {
-	vec2 res = vec2(1e10, 0.0);
+	return length(p) - r;
+}
 
-	if (pos.x < -0.5)
-	{
-		res = opU(res, vec2(opS(
-			sdRoundBox(pos - vec3(-2.0, 0.2, 1.0), vec3(0.15, 0.15, 0.15), 0.05),
-			sdSphere(pos - vec3(-2.0, 0.2, 1.0), 0.25)), 13.0));
-		res = opU(res, vec2(opS(
-			sdTorus82(pos - vec3(-2.0, 0.2, 0.0), vec2(0.20, 0.1)),
-			sdCylinder(
-				opRep(vec3(_atan(pos.x + 2.0, pos.z) / 6.2831, pos.y, 0.02 + 0.5*length(pos - vec3(-2.0, 0.2, 0.0))), vec3(0.05, 1.0, 0.05)), vec2(0.02, 0.6))), 51.0));
-		res = opU(res, vec2(0.5*sdSphere(pos - vec3(-2.0, 0.25, -1.0), 0.2) + 0.03*sin(45.0*pos.x)*sin(45.0*pos.y)*sin(45.0*pos.z), 65.0));
-		res = opU(res, vec2(0.6*sdTorus(
-			opTwist(pos - vec3(-2.0, 0.25, 2.0)), vec2(0.20, 0.05)), 46.7));
-		res = opU(res, vec2(sdRoundCone(pos - vec3(-2.0, 0.20, -2.0), 0.2, 0.1, 0.3), 23.56));
-	}
-	if (pos.x > -2.5 && pos.x < 0.5)
-	{
-		res = opU(res, vec2(sdTriPrism(pos - vec3(-1.0, 0.25, -1.0), vec2(0.25, 0.05)), 43.5));
-		res = opU(res, vec2(sdTorus88(pos - vec3(-1.0, 0.25, 2.0), vec2(0.20, 0.05)), 43.0));
-		res = opU(res, vec2(sdHexPrism(pos - vec3(-1.0, 0.20, 1.0), vec2(0.25, 0.05)), 17.0));
-		res = opU(res, vec2(sdOctahedron(pos - vec3(-1.0, 0.15, -2.0), 0.35), 37.0));
-		res = opU(res, vec2(sdEllipsoid(pos - vec3(-1.0, 0.30, 0.0), vec3(0.2, 0.25, 0.05)), 43.17));
-	}
-	if (pos.x > -1.5 && pos.x < 1.5)
-	{
-		res = opU(res, vec2(sdSphere(pos - vec3(0.0, 0.25, 0.0), 0.25), 46.9));
-		res = opU(res, vec2(sdTorus(pos - vec3(0.0, 0.25, 1.0), vec2(0.20, 0.05)), 25.0));
-		res = opU(res, vec2(sdCone(pos - vec3(0.0, 0.50, -1.0), vec3(0.8, 0.6, 0.3)), 55.0));
-		res = opU(res, vec2(sdTorus82(pos - vec3(0.0, 0.25, 2.0), vec2(0.20, 0.05)), 50.0));
-		res = opU(res, vec2(sdCappedCone(pos - vec3(0.0, 0.35, -2.0), 0.15, 0.2, 0.1), 13.67));
-	}
-	if (pos.x > -0.5 && pos.x < 2.5)
-	{
-		res = opU(res, vec2(sdBox(pos - vec3(1.0, 0.25, 0.0), vec3(0.25, 0.25, 0.25)), 3.0));
-		res = opU(res, vec2(sdRoundBox(pos - vec3(1.0, 0.25, 1.0), vec3(0.15, 0.15, 0.15), 0.1), 41.0));
-		res = opU(res, vec2(sdCapsule(pos - vec3(1.0, 0.00, -2.0), vec3(-0.1, 0.1, -0.1), vec3(0.2, 0.4, 0.2), 0.1), 31.9));
-		res = opU(res, vec2(sdCylinder(pos - vec3(1.0, 0.30, -1.0), vec2(0.1, 0.2)), 8.0));
-		res = opU(res, vec2(sdCylinder6(pos - vec3(1.0, 0.30, 2.0), vec2(0.1, 0.2)), 12.0));
-	}
-	if (pos.x > 0.5)
-	{
-		res = opU(res, vec2(sdCylinder(pos - vec3(2.0, 0.20, -1.0), vec3(0.1, -0.1, 0.0), vec3(-0.1, 0.3, 0.1), 0.08), 31.2));
-		res = opU(res, vec2(sdRoundCone(pos - vec3(2.0, 0.20, -2.0), vec3(0.1, 0.0, 0.0), vec3(-0.1, 0.3, 0.1), 0.15, 0.05), 51.7));
-	}
+float s2dBox(in vec2 p, in vec2 b)
+{
+	vec2 d = abs(p) - b;
+	return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
 
-	return res;
+float s2dCapsule(vec2 p, vec2 a, vec2 b, float r)
+{
+	vec2 pa = p - a, ba = b - a;
+	float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+	return length(pa - ba * h) - r;
+}
+
+float s2dTri(in vec2 p)
+{
+	vec2 slope1 = normalize(vec2(0.6, 1));
+	vec2 slope2 = vec2(slope1.x, -slope1.y);
+	float slope_ofs = 0.065;
+
+	float d = dot(p, vec2(-1, 0));
+	d = max(d, dot(p - vec2(0, slope_ofs), slope1));
+	d = max(d, dot(p - vec2(0, -slope_ofs), slope2));
+
+	return d;
+}
+
+float s2dUsbLogo(in vec2 p)
+{
+	float d = 1e10;
+
+	// Center
+	p.y -= 0.5;
+
+	d = opU(d, s2dCircle(p - vec2(0.11, 0.0), 0.1));
+	d = opU(d, s2dBox(p - vec2(0.5, 0.0), vec2(0.39, 0.02)));
+	d = opU(d, s2dTri(p - vec2(0.88, 0.0)));
+
+	d = opU(d, s2dCircle(p - vec2(0.56, 0.15), 0.052));
+	d = opU(d, s2dCapsule(p, vec2(0.56, 0.15), vec2(0.4, 0.15), 0.02));
+	d = opU(d, s2dCapsule(p, vec2(0.25, 0.0), vec2(0.4, 0.15), 0.02));
+
+	d = opU(d, s2dBox(p - vec2(0.74, -0.15), vec2(0.052, 0.052)));
+	d = opU(d, s2dCapsule(p, vec2(0.74, -0.15), vec2(0.58, -0.15), 0.02));
+	d = opU(d, s2dCapsule(p, vec2(0.38, 0.0), vec2(0.58, -0.15), 0.02));
+
+	return d;
 }
 
 vec3 rot_xy(vec3 p, float ang)
@@ -463,16 +466,21 @@ vec2 sdWheel(in vec3 pos)
 
 	// Add the wheel
 	float wheel_mat = 15.0 + length(pos.xy) * 10.0;
-	float center_mat = 5486.0 + length(pos.xy) * 10.0;
+	float center_mat = 5486.0 + length(pos.xy) * 5.0;
 
 	vec3 wpos = rot_xy(pos, rot_ang);
+
+	float logo_scale = 4.0f;
+	float logo = s2dUsbLogo((wpos.xy / logo_scale + vec2(0.5, 0.5))) * logo_scale;
+	if (logo <= 0.0f) center_mat = 1000.0;
+
 	d = sdCylinder_xy(wpos - vec3(0, 0, 1), vec2(5.2, 0.5));
 	d = opU(d, sdCylinder_xy(wpos - vec3(0, 0, 0.8), vec2(5.7, 0.1)));
 	//res = opU(res, vec2(d, 15.0));
 	res = opU(res, vec2(d, wheel_mat));
-	res = opU(res, vec2(sdBox(wpos - vec3(0, 0, 0.4), vec3(1, 1, 0.1)), center_mat));
-	res = opU(res, vec2(sdBox(rot_xy(wpos, PI / 4.0) - vec3(0, 0, 0.4), vec3(1, 1, 0.1)), center_mat));
-	res = opS(res, vec2(sdBox(wpos - vec3(0, 0, 0), vec3(0.4, 0.4, 0.35)), center_mat));
+	res = opU(res, vec2(sdRoundBox(wpos - vec3(0, 0, 0.6), vec3(1.8, 1.8, 0.1), 0.1), center_mat));
+	res = opU(res, vec2(sdRoundBox(rot_xy(wpos, PI / 4.0) - vec3(0, 0, 0.6), vec3(1.8, 1.8, 0.1), 0.1), center_mat));
+
 
 	// Pick the segment
 #ifndef UNITY_MODE
@@ -495,6 +503,26 @@ vec2 sdWheel(in vec3 pos)
 	return res;
 }
 
+vec2 sdWheelExplosion(in vec3 pos)
+{
+	vec2 res = vec2(1e10, 0.0);
+
+	float expl_time = 1.0;
+	float expl = mod(iTime, expl_time);
+
+#ifndef UNITY_MODE
+	expl = 0.0;
+#else
+	expl = clamp(_WheelExplosion, 0.0, expl_time);
+#endif
+	expl = expl * cos(expl * pos.x * pos.y * pos.z);
+
+	res = opU(res, sdWheel(pos));
+	res.x += expl * 3.0;
+
+	return res;
+}
+
 vec2 map(in vec3 pos)
 {
 	vec2 res = vec2(1e10, 0.0);
@@ -510,7 +538,9 @@ vec2 map(in vec3 pos)
 	usb_plug_offset *= 1.5;
 	float usb_plug_ang = usb_plug_orientation * PI;
 
-	res = opU(res, sdWheel(pos));
+	//res = opU(res, sdWheel(pos));
+	res = opU(res, sdWheelExplosion(pos));
+
 	res = opU(res, sdUsbPlug(rot_xy(pos - vec3(0, -4.0, -0.15 - usb_plug_offset), usb_plug_ang)));
 
 	return res;
@@ -684,6 +714,9 @@ vec3 render(in vec3 ro, in vec3 rd)
 		col += 9.00*spe*vec3(1.00, 0.90, 0.70);
 
 		col = mix(col, vec3(0.8, 0.9, 1.0), 1.0 - exp(-0.0002*t*t*t));
+
+		// Logo
+		if (m == 1000.0) col = vec3(0, 0, 0);
 	}
 
 	return vec3(clamp(col, 0.0, 1.0));
@@ -704,10 +737,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 	float time = 0.0 + iTime;
 
 	// camera	
-	vec3 ro = vec3(4.6*cos(0.5*time + 6.0*mo.x), -2.0 + 2.0*mo.y, 0.5 + 4.6*sin(0.5*time + 6.0*mo.x));
-	ro *= 1.6;
-	ro.z = -abs(ro.z);
-	vec3 ta = vec3(0, -1.5, 0);
+	vec3 ro = vec3(2.6*cos(0.5*time + 6.0*mo.x), -3.5 + 2.0*mo.y, -6.5 + 1.6*sin(0.5*time + 6.0*mo.x));
+	//ro.z = -abs(ro.z);
+	vec3 ta = vec3(0, -2.5, 0);
 	// camera-to-world transformation
 	mat3 ca = setCamera(ro, ta, 0.0);
 

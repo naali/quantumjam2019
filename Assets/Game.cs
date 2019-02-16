@@ -13,6 +13,7 @@ public class Game : MonoBehaviour
 
     private float m_wheel_rot = 0.0f;
     private float m_wheel_rot_dest = 0.0f;
+    private float m_wheel_explosion = -1.0f;
     private float m_plug_insert_anim = PlugInsertAnimLength;
     private float m_plug_rot = 0.0f;
     private float m_plug_rot_dest = 0.0f;
@@ -38,9 +39,13 @@ public class Game : MonoBehaviour
             m_plug_rot_dest = 1.0f - m_plug_rot_dest;
         if (Input.GetKeyDown(KeyCode.E))
             m_plug_insert_anim = 0.0f;
+        if (Input.GetKeyDown(KeyCode.R))
+            m_wheel_explosion = (m_wheel_explosion < 0.0f) ? 0.0f : -1.0f;
 
         // Update the animations
         m_wheel_rot += (m_wheel_rot_dest - m_wheel_rot) * Time.deltaTime * 5.0f;
+        if (m_wheel_explosion >= 0.0f)
+            m_wheel_explosion += Time.deltaTime;
         m_plug_rot += (m_plug_rot_dest - m_plug_rot) * Time.deltaTime * 5.0f;
         m_plug_insert_anim = Mathf.Min(m_plug_insert_anim + Time.deltaTime, PlugInsertAnimLength);
     }
@@ -60,6 +65,7 @@ public class Game : MonoBehaviour
         RenderMaterial.SetFloat("_ResY", yres);
         RenderMaterial.SetInt("_Frame", m_frame_count);
         RenderMaterial.SetFloat("_WheelPos", m_wheel_rot);
+        RenderMaterial.SetFloat("_WheelExplosion", m_wheel_explosion);
         RenderMaterial.SetFloat("_PlugOffset", plug_offset);
         RenderMaterial.SetFloat("_PlugOrientation", m_plug_rot);
 
