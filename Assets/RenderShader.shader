@@ -523,6 +523,23 @@ vec2 sdWheelExplosion(in vec3 pos)
 	return res;
 }
 
+vec2 sdSurrounds(in vec3 pos)
+{
+	float rep = 5.0;
+	vec3 rep3 = vec3(rep, rep, rep);
+
+	float manh_dist = max(abs(pos.x), max(abs(pos.y), abs(pos.z)));
+	if (manh_dist < 6.5)
+		return vec2(sdSphere(pos, -5000.0), 0.0);
+
+	pos += rep3 * 0.5;
+
+	vec3 pos_rep = mod(pos, rep3) - 0.5*rep;
+	vec3 cell = floor(pos / rep3);
+
+	return sdUsbHole(pos_rep);
+}
+
 vec2 map(in vec3 pos)
 {
 	vec2 res = vec2(1e10, 0.0);
@@ -542,6 +559,9 @@ vec2 map(in vec3 pos)
 	res = opU(res, sdWheelExplosion(pos));
 
 	res = opU(res, sdUsbPlug(rot_xy(pos - vec3(0, -4.0, -0.15 - usb_plug_offset), usb_plug_ang)));
+
+	//res = opU(res, sdSurrounds(pos));
+	//res = sdSurrounds(pos);
 
 	return res;
 }
@@ -565,7 +585,7 @@ vec2 castRay(in vec3 ro, in vec3 rd)
 	vec2 res = vec2(-1.0, -1.0);
 
 	float tmin = 1.0;
-	float tmax = 20.0;
+	float tmax = 50.0;
 	/*
 		// raytrace floor plane
 		float tp1 = (0.0-ro.y)/rd.y;
@@ -669,6 +689,7 @@ float checkersGradBox(in vec2 p)
 vec3 render(in vec3 ro, in vec3 rd)
 {
 	vec3 col = vec3(0.7, 0.9, 1.0) + rd.y*0.8;
+	col *= 0.1; // Make sky darker
 	vec2 res = castRay(ro, rd);
 	float t = res.x;
 	float m = res.y;
@@ -713,7 +734,8 @@ vec3 render(in vec3 ro, in vec3 rd)
 		col = col * lin;
 		col += 9.00*spe*vec3(1.00, 0.90, 0.70);
 
-		col = mix(col, vec3(0.8, 0.9, 1.0), 1.0 - exp(-0.0002*t*t*t));
+		//col = mix( col, vec3(0.8,0.9,1.0), 1.0-exp( -0.0002*t*t*t ) );
+		col = mix(col, vec3(0.2, 0.2, 0.3), 1.0 - exp(-0.0001*t*t*t));
 
 		// Logo
 		if (m == 1000.0) col = vec3(0, 0, 0);
