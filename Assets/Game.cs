@@ -6,6 +6,7 @@ using UnityEngine;
 public class Game : MonoBehaviour
 {
     public Material RenderMaterial;
+    public InputHandler input;
     private float m_time = 0.0f;
     private int m_frame_count = 0;
 
@@ -18,11 +19,6 @@ public class Game : MonoBehaviour
     private float m_plug_rot = 0.0f;
     private float m_plug_rot_dest = 0.0f;
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
 
     // Update is called once per frame
     void Update()
