@@ -293,6 +293,11 @@ float opS(float d1, float d2)
 	return max(-d2, d1);
 }
 
+vec2 opS(vec2 d1, vec2 d2)
+{
+	return vec2(max(-d2.x, d1.x), d1.y);
+}
+
 float opU(float d1, float d2)
 {
 	return min(d1, d2);
@@ -384,6 +389,9 @@ vec2 sdUsbHole(in vec3 pos)
 	d = opS(d, sdCylinder_xy(pos - vec3(0, 0, -0.1), vec2(0.9, 0.2)));
 	d -= 0.03; // Roundness
 
+	// Side supports
+	d = opU(d, sdCapsule(pos - vec3(0, 0, 0.8), vec3(-0.9, 0, 0), vec3(0.9, 0, 0), 0.3));
+
 	// USB hole
 	d = opS(d, sdRoundBox(pos, vec3(0.1 * usb_plug_ratio, 0.1, 0.5), 0.05));
 	d = opU(d, sdBox(pos - vec3(0, 0.05, 0.43), vec3(0.1 * usb_plug_ratio, 0.05, 0.3)));
@@ -405,13 +413,20 @@ vec2 map(in vec3 pos)
 {
 	vec2 res = vec2(1e10, 0.0);
 
+	float segment_ang = PI2 / 6.0; // One segments "pi" angle
+
 	float rot_ang = iTime;
 
+	rot_ang *= segment_ang; // Every integer step addvances one segment
+	rot_ang -= segment_ang / 2.0; // Align the angle so that every integer has a slot at the bottom
+
 	float d = 0.0;
+
 
 	// Add the wheel
 	vec3 wpos = rot_xy(pos, rot_ang);
 	d = sdCylinder_xy(wpos - vec3(0, 0, 1), vec2(5.2, 0.5));
+	d = opU(d, sdCylinder_xy(wpos - vec3(0, 0, 0.8), vec2(5.7, 0.1)));
 	d = opU(d, sdBox(wpos - vec3(0, 0, 0.4), vec3(1, 1, 0.1)));
 	d = opU(d, sdBox(rot_xy(wpos, PI / 4.0) - vec3(0, 0, 0.4), vec3(1, 1, 0.1)));
 	res = opU(res, vec2(d, 36.0));
@@ -422,16 +437,17 @@ vec2 map(in vec3 pos)
 #else
 	float seg_ang = atan2(pos.y, pos.x) - rot_ang;
 #endif
-	seg_ang += (PI2 / 6.0) / 2.0;
-	seg_ang -= mod(seg_ang, PI2 / 6.0);
+	seg_ang += segment_ang / 2.0;
+	seg_ang -= mod(seg_ang, segment_ang);
 	seg_ang += rot_ang;
 
 	// Insert the hole
 	vec3 hole_pos = vec3(cos(seg_ang), sin(seg_ang), 0.0) * 4.0;
 
 	//float d = sdBox(pos - hole_pos, vec3(0.1, 0.1, 0.1));
-	d = sdUsbHole(pos - hole_pos).x;
 
+	res = opS(res, vec2(sdCylinder_xy(pos - hole_pos, vec2(1.1, 5.0)), 1.0)); // Small hole around the plug
+	d = sdUsbHole(pos - hole_pos).x;
 	res = opU(res, vec2(d, 36.0));
 
 	return res;
@@ -497,7 +513,7 @@ vec2 castRay(in vec3 ro, in vec3 rd)
 float calcSoftshadow(in vec3 ro, in vec3 rd, in float mint, in float tmax)
 {
 	// bounding volume
-	float tp = (maxHei - ro.y) / rd.y; if (tp > 0.0) tmax = min(tmax, tp);
+//    float tp = (maxHei-ro.y)/rd.y; if( tp>0.0 ) tmax = min( tmax, tp );
 
 	float res = 1.0;
 	float t = mint;
