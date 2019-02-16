@@ -55,7 +55,7 @@ public class Game : MonoBehaviour
         if (RenderMaterial == null)
             return;
 
-        int xres = 400;
+        int xres = 320;
         int yres = (xres * Screen.height) / Screen.width;
 
         float plug_offset = Mathf.Clamp01(m_plug_insert_anim / PlugInsertAnimLength);
