@@ -29,7 +29,7 @@ public class Game : MonoBehaviour
     {
         float delta_t = Time.deltaTime;
 
-        m_time += delta_t;
+        m_time += delta_t * 1.0f; // Multiply based on feeling; the shadertoy seems to run at a faster timerate
         ++m_frame_count;
 
         // Test controls

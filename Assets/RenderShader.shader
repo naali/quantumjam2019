@@ -768,7 +768,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 	// Explosion effects
 	if (expl_amount >= 0.0f)
 	{
-		expl_amount = clamp(expl_amount * 0.3 - 0.1, 0.0, 1.0) * 0.1;
+		expl_amount = clamp(expl_amount * 0.2 - 0.025, 0.0, 1.0) * 0.1;
 		fragCoord.x += cos(fract(fragCoord.y * 1234.678) * 326.0) * iResolution.x * expl_amount;
 	}
 
