@@ -15,6 +15,10 @@ CGPROGRAM
 			float _ResX, _ResY;
 			int _Frame;
 
+			float _WheelPos; // Every integer is at "position"
+			float _PlugOffset; // 0-1, 1 is attached
+			float _PlugOrientation; // 0-1
+
 			struct v2f {
 				float4 position : SV_POSITION;
 			};
@@ -378,30 +382,6 @@ vec2 map_IQ(in vec3 pos)
 	return res;
 }
 
-#define usb_plug_ratio (12.0 / 4.5)
-
-vec2 sdUsbHole(in vec3 pos)
-{
-	vec2 res = vec2(1e10, 0.0);
-
-	// Shell
-	float d = sdCylinder_xy(pos - vec3(0, 0, 0.5), vec2(1.0, 0.5));
-	d = opS(d, sdCylinder_xy(pos - vec3(0, 0, -0.1), vec2(0.9, 0.2)));
-	d -= 0.03; // Roundness
-
-	// Side supports
-	d = opU(d, sdCapsule(pos - vec3(0, 0, 0.8), vec3(-0.9, 0, 0), vec3(0.9, 0, 0), 0.3));
-
-	// USB hole
-	d = opS(d, sdRoundBox(pos, vec3(0.1 * usb_plug_ratio, 0.1, 0.5), 0.05));
-	d = opU(d, sdBox(pos - vec3(0, 0.05, 0.43), vec3(0.1 * usb_plug_ratio, 0.05, 0.3)));
-
-	res = opU(res, vec2(d, 36.0));
-
-
-	return res;
-}
-
 vec3 rot_xy(vec3 p, float ang)
 {
 	float c = cos(ang);
@@ -409,13 +389,71 @@ vec3 rot_xy(vec3 p, float ang)
 	return vec3(p.x * c + p.y * s, p.x * s - p.y * c, p.z);
 }
 
-vec2 map(in vec3 pos)
+
+#define usb_plug_ratio (12.0 / 4.5)
+
+vec2 sdUsbHole(in vec3 pos)
+{
+	vec2 res = vec2(1e10, 0.0);
+
+	float shell_mat = 46.0 - length(pos.xy) * 10.0;
+
+	// Shell
+	float d = sdCylinder_xy(pos - vec3(0, 0, 0.5), vec2(1.0, 0.5));
+	d = opS(d, sdCylinder_xy(pos - vec3(0, 0, -0.1), vec2(0.9, 0.2)));
+	d -= 0.03; // Roundness
+
+	// Side supports
+	d = opU(d, sdCapsule(pos - vec3(0, 0, 0.7), vec3(-0.9, 0, 0), vec3(0.9, 0, 0), 0.3));
+
+	// USB hole
+	d = opS(d, sdRoundBox(pos, vec3(0.1 * usb_plug_ratio, 0.1, 0.5), 0.05));
+	res = opU(res, vec2(d, shell_mat));
+
+	res = opU(res, vec2(sdBox(pos - vec3(0, 0.05, 0.43), vec3(0.1 * usb_plug_ratio, 0.05, 0.3)), 333.0));
+
+	return res;
+}
+
+vec2 sdUsbPlug(in vec3 pos)
+{
+	vec2 res = vec2(1e10, 0.0);
+
+	pos.z = -pos.z; // Flip to face the wheel
+
+	float d = 99999.0;
+
+	// The head
+	res = opU(res, vec2(sdBox(pos, vec3(0.1 * usb_plug_ratio, 0.1, 0.6)), 123.0));
+	res = opU(res, vec2(sdBox(pos - vec3(0.1, 0, -0.35), vec3(0.06, 0.105, 0.1)), 85.0));
+	res = opU(res, vec2(sdBox(pos - vec3(-0.1, 0, -0.35), vec3(0.06, 0.105, 0.1)), 85.0));
+	// The body
+	float body_mat = 55.0 - abs(fract(pos.z / 0.4)) * 3.0;
+	res = opU(res, vec2(sdRoundBox(pos - vec3(0, 0, 0.5), vec3(0.1 * usb_plug_ratio, 0.1, 0.5), 0.1), body_mat));
+	res = opU(res, vec2(sdCylinder_xy(pos - vec3(0, 0, 1.0), vec2(0.3, 0.3)) - 0.03, 56.0));
+	// The wire "cap"
+	res = opU(res, vec2(sdCylinder_xy(pos - vec3(0, 0, 1.2), vec2(0.2, 0.3)) - 0.03, 6.0));
+	// The wire
+	res = opU(res, vec2(sdCylinder_xy(pos - vec3(0, 0, 5.2), vec2(0.11, 5.0)), 10.0));
+
+	//res = opU(res, vec2(d, 123.0));
+
+	//res = opU(res, sdWheel(pos));
+
+	return res;
+}
+
+vec2 sdWheel(in vec3 pos)
 {
 	vec2 res = vec2(1e10, 0.0);
 
 	float segment_ang = PI2 / 6.0; // One segments "pi" angle
 
+#ifndef UNITY_MODE
 	float rot_ang = iTime;
+#else
+	float rot_ang = _WheelPos;
+#endif
 
 	rot_ang *= segment_ang; // Every integer step addvances one segment
 	rot_ang -= segment_ang / 2.0; // Align the angle so that every integer has a slot at the bottom
@@ -424,12 +462,17 @@ vec2 map(in vec3 pos)
 
 
 	// Add the wheel
+	float wheel_mat = 15.0 + length(pos.xy) * 10.0;
+	float center_mat = 5486.0 + length(pos.xy) * 10.0;
+
 	vec3 wpos = rot_xy(pos, rot_ang);
 	d = sdCylinder_xy(wpos - vec3(0, 0, 1), vec2(5.2, 0.5));
 	d = opU(d, sdCylinder_xy(wpos - vec3(0, 0, 0.8), vec2(5.7, 0.1)));
-	d = opU(d, sdBox(wpos - vec3(0, 0, 0.4), vec3(1, 1, 0.1)));
-	d = opU(d, sdBox(rot_xy(wpos, PI / 4.0) - vec3(0, 0, 0.4), vec3(1, 1, 0.1)));
-	res = opU(res, vec2(d, 36.0));
+	//res = opU(res, vec2(d, 15.0));
+	res = opU(res, vec2(d, wheel_mat));
+	res = opU(res, vec2(sdBox(wpos - vec3(0, 0, 0.4), vec3(1, 1, 0.1)), center_mat));
+	res = opU(res, vec2(sdBox(rot_xy(wpos, PI / 4.0) - vec3(0, 0, 0.4), vec3(1, 1, 0.1)), center_mat));
+	res = opS(res, vec2(sdBox(wpos - vec3(0, 0, 0), vec3(0.4, 0.4, 0.35)), center_mat));
 
 	// Pick the segment
 #ifndef UNITY_MODE
@@ -447,12 +490,31 @@ vec2 map(in vec3 pos)
 	//float d = sdBox(pos - hole_pos, vec3(0.1, 0.1, 0.1));
 
 	res = opS(res, vec2(sdCylinder_xy(pos - hole_pos, vec2(1.1, 5.0)), 1.0)); // Small hole around the plug
-	d = sdUsbHole(pos - hole_pos).x;
-	res = opU(res, vec2(d, 36.0));
+	res = opU(res, sdUsbHole(pos - hole_pos));
 
 	return res;
 }
 
+vec2 map(in vec3 pos)
+{
+	vec2 res = vec2(1e10, 0.0);
+
+#ifndef UNITY_MODE
+	float usb_plug_offset = pow(abs(cos(iTime*3.0)), 5.0);
+	float usb_plug_orientation = smoothstep(0.0, 1.0, abs(cos(iTime*1.1235)));
+#else
+	float usb_plug_offset = _PlugOffset;
+	float usb_plug_orientation = _PlugOrientation;
+#endif
+
+	usb_plug_offset *= 1.5;
+	float usb_plug_ang = usb_plug_orientation * PI;
+
+	res = opU(res, sdWheel(pos));
+	res = opU(res, sdUsbPlug(rot_xy(pos - vec3(0, -4.0, -0.15 - usb_plug_offset), usb_plug_ang)));
+
+	return res;
+}
 
 // http://iquilezles.org/www/articles/boxfunctions/boxfunctions.htm
 vec2 iBox(in vec3 ro, in vec3 rd, in vec3 rad)
@@ -642,10 +704,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 	float time = 0.0 + iTime;
 
 	// camera	
-	vec3 ro = vec3(4.6*cos(0.5*time + 6.0*mo.x), 1.0 + 2.0*mo.y, 0.5 + 4.6*sin(0.5*time + 6.0*mo.x));
+	vec3 ro = vec3(4.6*cos(0.5*time + 6.0*mo.x), -2.0 + 2.0*mo.y, 0.5 + 4.6*sin(0.5*time + 6.0*mo.x));
 	ro *= 1.6;
 	ro.z = -abs(ro.z);
-	vec3 ta = vec3(0, 0, 0);
+	vec3 ta = vec3(0, -1.5, 0);
 	// camera-to-world transformation
 	mat3 ca = setCamera(ro, ta, 0.0);
 
@@ -682,7 +744,8 @@ fragColor = vec4(tot, 1.0);
 /////////////////////////
 
 
-			float4 frag(v2f i) : SV_Target {
+			float4 frag(v2f i) : SV_Target
+			{
 				float2 resolution = _ScreenParams.xy;
 				resolution = float2(_ResX, _ResY);
 				float2 uv = -1.0 + 2.0*i.position.xy / resolution.xy;
@@ -694,41 +757,6 @@ fragColor = vec4(tot, 1.0);
 				iFrame = _Frame;
 				mainImage(output, i.position.xy);
 				return output;
-
-				// OLD:
-
-
-				// Background
-				fixed4 outColour = fixed4(0.8 + 0.2*uv.y,0.8 + 0.2*uv.y,0.8 + 0.2*uv.y,1);
-
-				// Bubbles
-				for (int i = 0; i < 40; i++) {
-
-					// Bubble seeds
-					float pha = sin(float(i)*546.13 + 1.0)*0.5 + 0.5;
-					float siz = pow(sin(float(i)*651.74 + 5.0)*0.5 + 0.5, 4.0);
-					float pox = sin(float(i)*321.55 + 4.1);
-
-					// Bubble size, position and color
-					float rad = 0.1 + 0.5*siz;
-					float2  pos = float2(pox, -1.0 - rad + (2.0 + 2.0*rad)*fmod(pha + 0.1*_Time.y*(0.2 + 0.8*siz),1.0));
-					float dis = length(uv - pos);
-					float3 col = lerp(float3(0.94,0.3,0.0), float3(0.1,0.4,0.8), 0.5 + 0.5*sin(float(i)*1.2 + 1.9));
-
-					// Add a black outline around each bubble
-					col += 8.0*smoothstep(rad*0.95, rad, dis);
-
-					// Render
-					float f = length(uv - pos) / rad;
-					f = sqrt(clamp(1.0 - f * f,0.0,1.0));
-
-					outColour.rgb -= col.zyx *(1.0 - smoothstep(rad*0.95, rad, dis)) * f;
-				}
-
-				// Vignetting    
-				outColour *= sqrt(1.5 - 0.5*length(uv));
-
-				return outColour;
 			}
 
 			ENDCG
