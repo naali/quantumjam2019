@@ -27,10 +27,10 @@ public class Game : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        m_time += Time.deltaTime;
-        ++m_frame_count;
+        float delta_t = Time.deltaTime;
 
-        m_time += Input.GetAxis("Horizontal") * 5.0f;
+        m_time += delta_t;
+        ++m_frame_count;
 
         // Test controls
         if (Input.GetKeyDown(KeyCode.Q))
@@ -43,11 +43,11 @@ public class Game : MonoBehaviour
             m_wheel_explosion = (m_wheel_explosion < 0.0f) ? 0.0f : -1.0f;
 
         // Update the animations
-        m_wheel_rot += (m_wheel_rot_dest - m_wheel_rot) * Time.deltaTime * 5.0f;
+        m_wheel_rot += (m_wheel_rot_dest - m_wheel_rot) * delta_t * 5.0f;
         if (m_wheel_explosion >= 0.0f)
-            m_wheel_explosion += Time.deltaTime;
-        m_plug_rot += (m_plug_rot_dest - m_plug_rot) * Time.deltaTime * 5.0f;
-        m_plug_insert_anim = Mathf.Min(m_plug_insert_anim + Time.deltaTime, PlugInsertAnimLength);
+            m_wheel_explosion += delta_t;
+        m_plug_rot += (m_plug_rot_dest - m_plug_rot) * delta_t * 5.0f;
+        m_plug_insert_anim = Mathf.Min(m_plug_insert_anim + delta_t, PlugInsertAnimLength);
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
