@@ -242,6 +242,9 @@ public class Game : MonoBehaviour
             m_plug_insert_anim = 0.0f;
             m_plug_anim_timer = 0.0f;
             m_game_state = GameStateType.InGamePlug;
+
+            if (!m_fails)
+                m_audio_source.PlayOneShot(AudioStart);
         }
 
 
