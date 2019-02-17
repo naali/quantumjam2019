@@ -74,6 +74,9 @@ public class Game : MonoBehaviour
     private bool m_plug_up;
 
     private float m_vibratime;
+    private bool m_fails;
+
+    private float m_plug_anim_timer;
 
     private enum GameStateType {
         Menu,
@@ -215,51 +218,62 @@ public class Game : MonoBehaviour
 
 
         if (input.PlugPressed) {
-            m_plug_insert_anim = 0.0f;
 
             if (m_plug_up) {
     
                 if (result > 0.5f) {
-                    m_wheel_explosion = 0.0f;
-                    m_game_state = GameStateType.InGameExplosion;
-                    m_audio_source.PlayOneShot(AudioFail);
+                    m_fails = true;
                 } else {
-                    UpdateGameScore(++m_gamescore);
-                    m_gametime += 2.0f;
-                    m_wheel_rot_dest++;
-                    m_game_state = GameStateType.InGameRotation;
-                    InitQuantumEnvironment(UnityEngine.Random.value);
-                    ResetGrowthMeasures();
-                    m_audio_source.PlayOneShot(AudioInsertCable);
+                    m_fails = false;
                 }
 
             } else {
     
                 if (result <= 0.5f) {
-                    m_wheel_explosion = 0.0f;
-                    m_game_state = GameStateType.InGameExplosion;
-                    m_audio_source.PlayOneShot(AudioFail);
+                    m_fails = true;
                 } else {
-                    UpdateGameScore(++m_gamescore);
-                    m_gametime += 2.0f;
-                    m_wheel_rot_dest++;
-                    m_game_state = GameStateType.InGameRotation;
-                    InitQuantumEnvironment(UnityEngine.Random.value);
-                    ResetGrowthMeasures();
-                    m_audio_source.PlayOneShot(AudioInsertCable);
+                    m_fails = false;
                 }
 
             }
+
+            m_plug_insert_anim = 0.0f;
+            m_plug_anim_timer = 0.0f;
+            m_game_state = GameStateType.InGamePlug;
         }
 
 
-        RunStep(m_step, Time.deltaTime);
+        RunStep(m_step++, Time.deltaTime);
     }
 
     private void UpdateIngamePlug()
     {
         UpdateGameTime();
 
+        m_plug_anim_timer += Time.deltaTime;
+
+        if (m_plug_anim_timer > 0.3f) {
+            m_plug_anim_timer = 0.0f;
+
+            if (m_fails) {
+                m_wheel_explosion = 0.0f;
+                m_game_state = GameStateType.InGameExplosion;
+                m_audio_source.PlayOneShot(AudioFail);
+            } else {
+                UpdateGameScore(++m_gamescore);
+                m_gametime += Mathf.Max(4.0f - (float)m_gamescore * 0.3f, 1.5f);
+                m_wheel_rot_dest++;
+                m_game_state = GameStateType.InGameRotation;
+                InitQuantumEnvironment(UnityEngine.Random.value);
+                ResetGrowthMeasures();
+                m_audio_source.PlayOneShot(AudioInsertCable);
+                m_step = 0;
+
+                for (int i = 0; i<20; i++) {
+                    RunStep(m_step++, Time.deltaTime);
+                }
+            }
+        }
     }
 
     private void UpdateGameOver()
