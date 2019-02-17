@@ -507,14 +507,15 @@ vec2 sdWheelExplosion(in vec3 pos)
 {
 	vec2 res = vec2(1e10, 0.0);
 
-	float expl_time = 1.0;
+	float expl_time = 3.0;
 	float expl = mod(iTime, expl_time);
 
 #ifndef UNITY_MODE
-	expl = 0.0;
+	//expl=0.0;
 #else
 	expl = clamp(_WheelExplosion, 0.0, expl_time);
 #endif
+	expl *= 0.333;
 	expl = expl * cos(expl * pos.x * pos.y * pos.z);
 
 	res = opU(res, sdWheel(pos));
@@ -758,6 +759,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 	vec2 mo = iMouse.xy / iResolution.xy;
 	float time = 0.0 + iTime;
 
+#ifndef UNITY_MODE
+	float expl_amount = mod(iTime, 3.0f);
+#else
+	float expl_amount = _WheelExplosion;
+#endif
+
+	// Explosion effects
+	if (expl_amount >= 0.0f)
+	{
+		expl_amount = clamp(expl_amount * 0.2 - 0.025, 0.0, 1.0) * 0.1;
+		fragCoord.x += cos(fract(fragCoord.y * 1234.678) * 326.0) * iResolution.x * expl_amount;
+	}
+
+
 	// camera	
 	vec3 ro = vec3(2.6*cos(0.5*time + 6.0*mo.x), -3.5 + 2.0*mo.y, -6.5 + 1.6*sin(0.5*time + 6.0*mo.x));
 	//ro.z = -abs(ro.z);
@@ -792,6 +807,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 tot /= float(AA*AA);
 #endif
 
+
+tot *= pow(max(0.0, 1.0f - length(fragCoord / iResolution.xy - vec2(0.5, 0.5)) * 0.8), 1.44);
 
 fragColor = vec4(tot, 1.0);
 }
