@@ -27,7 +27,9 @@ public class Game : MonoBehaviour
         "Yet another casualty.",
         "There's no right way.",
         "Trying makes it harder.",
-        "Did you try it the other way?"
+        "Did you try it the other way?",
+        "Fits perfectly into ethernet socket",
+
     };
     public AudioClip AudioStart;
     public AudioClip AudioFlipCable;
