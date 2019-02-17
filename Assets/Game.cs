@@ -17,6 +17,7 @@ public class Game : MonoBehaviour
 
     public TMP_Text GameTimeText;
     public TMP_Text GameScoreText;
+    public TMP_Text EndScreenScoreText;
 
     public Material RenderMaterial;
     public InputHandler input;
@@ -38,6 +39,8 @@ public class Game : MonoBehaviour
     private float m_plug_rot = 0.0f;
     private float m_plug_rot_dest = 0.0f;
 
+    private float m_wheel_rot_anim = 0.0f;
+
     private RingBuffer m_growth_left;
     private RingBuffer m_growth_middle;
     private RingBuffer m_growth_right;
@@ -48,16 +51,18 @@ public class Game : MonoBehaviour
 
     private int m_step;
 
-    private double RandomTry {
-        get {
-            double noise = m_env.Noise;
-            return noise;
-        }
-    }
+    private float m_left;
+    private float m_right;
+
+    private float m_right_result;
+    private float m_left_result;
 
     private enum GameStateType {
         Menu,
         InGame,
+        InGamePlug,
+        InGameExplosion,
+        InGameRotation,
         GameOver
     }
 
@@ -76,6 +81,11 @@ public class Game : MonoBehaviour
 
     private void UpdateMenu()
     {
+
+        if (input.EscPressed) {
+            Application.Quit();
+        }
+
         if (input.StartPressed || input.FlipPressed) {
             InitQuantumEnvironment(UnityEngine.Random.value);
 
@@ -84,19 +94,54 @@ public class Game : MonoBehaviour
             GameScreen.SetActive(true);
             m_gametime = GameTime;
             m_gamescore = 0;
+            UpdateGameScore(m_gamescore);
             m_game_state = GameStateType.InGame;
         }
     }
 
-    private void UpdateInGame()
+    private void UpdateIngameExplosion()
+    {
+        UpdateGameTime();
+
+        if (m_wheel_explosion > 1.0f) {
+            m_wheel_explosion = -1.0f;
+            m_game_state = GameStateType.InGame;
+        }
+    }
+
+    private void UpdateIngameRotation()
+    {
+        UpdateGameTime();
+
+        if (m_wheel_rot_anim <= 0.0f) {
+            m_game_state = GameStateType.InGame;
+        }
+
+        m_wheel_rot_anim -= Time.deltaTime;
+    }
+
+    private void UpdateGameTime()
     {
         m_gametime -= Time.deltaTime;
+
+        float t = m_gametime >= 0.0f ? m_gametime : 0.0f;
+        GameTimeText.text = "Time left: " + (int)Math.Floor(t);
+    }
+
+    private void UpdateGameScore(int score)
+    {
+        GameScoreText.text = "Score: " + score;
+    }
+
+    private void UpdateInGame()
+    {
+        UpdateGameTime();
 
         if (m_gametime < 0 || input.EscPressed) {
             GameScreen.SetActive(false);
             MenuScreen.SetActive(false);
             EndScreen.SetActive(true);
-
+            EndScreenScoreText.text = "You plugged " + m_gamescore + " holes.\nQuantum Socket wins.";
             m_game_state = GameStateType.GameOver;
             return;
         }
@@ -107,12 +152,26 @@ public class Game : MonoBehaviour
 
         if (input.PlugPressed) {
             m_plug_insert_anim = 0.0f;
-            Debug.Log("TRY: " + RandomTry);
+            Debug.Log("ASD: " + m_left_result + " " + m_right_result);
+
+            if (m_left_result + m_right_result > 0.5f) {
+                m_wheel_explosion = 0.0f;
+                m_game_state = GameStateType.InGameExplosion;
+            } else {
+                UpdateGameScore(m_gamescore++);
+                m_wheel_rot_dest++;
+                m_game_state = GameStateType.InGameRotation;
+            }
         }
 
-        GameTimeText.text = "Time left: " + m_gametime;
 
         RunStep(m_step, Time.deltaTime);
+    }
+
+    private void UpdateIngamePlug()
+    {
+        UpdateGameTime();
+
     }
 
     private void UpdateGameOver()
@@ -131,6 +190,9 @@ public class Game : MonoBehaviour
         m_growth_right = new RingBuffer(0, GrowthBufferSize);
         m_growth_left = new RingBuffer(0, GrowthBufferSize);
         m_growth_middle = new RingBuffer(0, GrowthBufferSize);
+
+        m_left = UnityEngine.Random.value;
+        m_right = UnityEngine.Random.value;
     }
 
     private void RunStep(int step, float deltaTime)
@@ -140,21 +202,22 @@ public class Game : MonoBehaviour
         // Add a using Py.GIL() block whenever interacting with Python wrapper classes such as StirapEnv
         using (Py.GIL())
         {
-            float left = (float)Math.Sin(deltaTime * 17.0);
-            float right = (float)Math.Cos(deltaTime * 23.0);
-            result = m_env.Step(left, right);
+            result = m_env.Step(m_left, m_right);
         }
 
         float leftPop = result.LeftPopulation;
         float rightPop = result.RightPopulation;
         float midPop = 1f - (leftPop + rightPop);
+
+        m_left_result = result.LeftPopulation;
+        m_right_result = result.RightPopulation;
         
         UpdateWell(result.RightPopulation, result.RightWellPosition, m_growth_right);
         UpdateWell(result.LeftPopulation, result.LeftWellPosition, m_growth_left);
         UpdateWell(1f - (leftPop + rightPop), 0, m_growth_middle);
-        
-//        RenderPlot(result);
-//        SetScore(result.RightPopulation, step);
+
+        input.SetVibration(0, result.LeftPopulation, 1/60f);
+        input.SetVibration(1, result.RightPopulation, 1/60f);
     }
 
 
@@ -175,9 +238,21 @@ public class Game : MonoBehaviour
                 UpdateInGame();
                 break;
 
+            case GameStateType.InGamePlug:
+                UpdateIngamePlug();
+                break;
+
+            case GameStateType.InGameRotation:
+                UpdateIngameRotation();
+                break;
+
             case GameStateType.GameOver:
                 UpdateGameOver();
-                break;            
+                break;
+
+            case GameStateType.InGameExplosion:
+                UpdateIngameExplosion();
+                break;
 
             case GameStateType.Menu:
             default:
@@ -196,9 +271,7 @@ public class Game : MonoBehaviour
     private void InitQuantumEnvironment(double displacement) {
         using (Python.Runtime.Py.GIL())
         {
-            
             m_env = new StirapEnv(QuantumTimeSteps, displacement);
-            Debug.Log("Noise: "+m_env.Noise);
         }
     }
 

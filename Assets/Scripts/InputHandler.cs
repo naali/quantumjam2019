@@ -6,6 +6,13 @@ public class InputHandler : MonoBehaviour {
     public int playerId = 0;
     private Player player;
 
+    public void SetVibration(int motorIndex, float motorLevel, float duration)
+    {
+        if (player == null) { return; }
+
+        player.SetVibration(motorIndex, motorLevel, duration);
+    }
+
     public bool FlipPressed {
         get {
             if (player == null) { return false; }
