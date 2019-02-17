@@ -29,6 +29,11 @@ public class Game : MonoBehaviour
         "Trying makes it harder.",
         "Did you try it the other way?"
     };
+    public AudioClip AudioStart;
+    public AudioClip AudioFlipCable;
+    public AudioClip AudioInsertCable;
+    public AudioClip AudioFail;
+    private AudioSource m_audio_source;
 
     public int QuantumTimeSteps = 400;
     public int GrowthBufferSize = 10;
@@ -77,6 +82,11 @@ public class Game : MonoBehaviour
 
     private GameStateType m_game_state;
 
+    void Start()
+    {
+        m_audio_source = GetComponent<AudioSource>();
+    }
+
     void Awake()
     {
         m_game_state = GameStateType.Menu;
@@ -96,6 +106,8 @@ public class Game : MonoBehaviour
         }
 
         if (input.StartPressed || input.FlipPressed) {
+            m_audio_source.PlayOneShot(AudioStart);
+
             InitQuantumEnvironment(UnityEngine.Random.value);
 
             MenuScreen.SetActive(false);
@@ -165,6 +177,7 @@ public class Game : MonoBehaviour
         }
 
         if (input.FlipPressed) {
+            m_audio_source.PlayOneShot(AudioFlipCable);
             m_plug_rot_dest = 1.0f - m_plug_rot_dest;
         }
 
@@ -175,10 +188,12 @@ public class Game : MonoBehaviour
             if (m_left_result + m_right_result > 0.5f) {
                 m_wheel_explosion = 0.0f;
                 m_game_state = GameStateType.InGameExplosion;
+                m_audio_source.PlayOneShot(AudioFail);
             } else {
                 UpdateGameScore(++m_gamescore);
                 m_wheel_rot_dest++;
                 m_game_state = GameStateType.InGameRotation;
+                m_audio_source.PlayOneShot(AudioInsertCable);
             }
         }
 
