@@ -29,7 +29,12 @@ public class Game : MonoBehaviour
         "Trying makes it harder.",
         "Did you try it the other way?",
         "Fits perfectly into ethernet socket",
-
+        "Was it even the correct cable?",
+        "Try to blow into it.",
+        "Use another socket.",
+        "I meant the other left.",
+        "Princess in another castle.",
+        "Was that HDMI socket?"
     };
     public AudioClip AudioStart;
     public AudioClip AudioFlipCable;
@@ -136,7 +141,6 @@ public class Game : MonoBehaviour
 
         if (m_wheel_explosion > 1.0f) {
             m_wheel_explosion = -1.0f;
-//            m_game_state = GameStateType.InGame;
 
             GameScreen.SetActive(false);
             MenuScreen.SetActive(false);
@@ -273,6 +277,10 @@ public class Game : MonoBehaviour
                 ResetGrowthMeasures();
                 m_audio_source.PlayOneShot(AudioInsertCable);
                 m_step = 0;
+
+                if (UnityEngine.Random.value > 0.5f) {
+                    m_plug_up = !m_plug_up;
+                }
 
                 for (int i = 0; i<20; i++) {
                     RunStep(m_step++, Time.deltaTime);
