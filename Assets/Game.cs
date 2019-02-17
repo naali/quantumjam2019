@@ -22,6 +22,12 @@ public class Game : MonoBehaviour
     public Material RenderMaterial;
     public InputHandler input;
 
+    public AudioClip AudioStart;
+    public AudioClip AudioFlipCable;
+    public AudioClip AudioInsertCable;
+    public AudioClip AudioFail;
+    private AudioSource m_audio_source;
+
     public int QuantumTimeSteps = 400;
     public int GrowthBufferSize = 10;
 
@@ -67,6 +73,11 @@ public class Game : MonoBehaviour
     }
 
     private GameStateType m_game_state;
+
+    void Start()
+    {
+        m_audio_source = GetComponent<AudioSource>();
+    }
 
     void Awake()
     {
