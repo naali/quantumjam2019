@@ -92,7 +92,11 @@ public class Game : MonoBehaviour
     {
         m_gametime -= Time.deltaTime;
 
-        if (m_gametime < 0) {
+        if (m_gametime < 0 || input.EscPressed) {
+            GameScreen.SetActive(false);
+            MenuScreen.SetActive(false);
+            EndScreen.SetActive(true);
+
             m_game_state = GameStateType.GameOver;
             return;
         }
@@ -113,12 +117,12 @@ public class Game : MonoBehaviour
 
     private void UpdateGameOver()
     {
-        GameScreen.SetActive(false);
-        MenuScreen.SetActive(false);
-        EndScreen.SetActive(true);
+        if (input.FlipPressed || input.EscPressed) {
+            EndScreen.SetActive(false);
+            GameScreen.SetActive(false);
+            MenuScreen.SetActive(true);
 
-        if (input.FlipPressed) {
-
+            m_game_state = GameStateType.Menu;
         }
     }
 
