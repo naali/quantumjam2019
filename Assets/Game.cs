@@ -71,6 +71,10 @@ public class Game : MonoBehaviour
     private float m_right_result;
     private float m_left_result;
 
+    private bool m_plug_up;
+
+    private float m_vibratime;
+
     private enum GameStateType {
         Menu,
         InGame,
@@ -91,6 +95,7 @@ public class Game : MonoBehaviour
     {
         m_game_state = GameStateType.Menu;
         m_step = 0;
+        m_plug_up = false;
         GameScreen.SetActive(false);
         EndScreen.SetActive(false);
         MenuScreen.SetActive(true);
@@ -179,21 +184,71 @@ public class Game : MonoBehaviour
         if (input.FlipPressed) {
             m_audio_source.PlayOneShot(AudioFlipCable);
             m_plug_rot_dest = 1.0f - m_plug_rot_dest;
+            m_plug_up = !m_plug_up;
         }
+
+        float result = m_left_result + m_right_result;
+
+        m_vibratime += (Time.deltaTime * 10.0f);
+
+        if (m_plug_up) {
+            if (result > 0.5f) {
+                input.SetVibration(0, 1.0f, 1/60f);
+            } else {
+                if (((int)m_vibratime % 2) == 0) {
+                    input.SetVibration(0, 0.0f, 1/60f);
+                } else {
+                    input.SetVibration(0, 1.0f, 1/60f);
+                }
+            }
+        } else {
+            if (result <= 0.5f) {
+                input.SetVibration(0, 1.0f, 1/60f);
+            } else {
+                if (((int)m_vibratime % 2) == 0) {
+                    input.SetVibration(0, 0.0f, 1/60f);
+                } else {
+                    input.SetVibration(0, 1.0f, 1/60f);
+                }
+            }
+        }
+
 
         if (input.PlugPressed) {
             m_plug_insert_anim = 0.0f;
-            Debug.Log("ASD: " + m_left_result + " " + m_right_result);
 
-            if (m_left_result + m_right_result > 0.5f) {
-                m_wheel_explosion = 0.0f;
-                m_game_state = GameStateType.InGameExplosion;
-                m_audio_source.PlayOneShot(AudioFail);
+            if (m_plug_up) {
+    
+                if (result > 0.5f) {
+                    m_wheel_explosion = 0.0f;
+                    m_game_state = GameStateType.InGameExplosion;
+                    m_audio_source.PlayOneShot(AudioFail);
+                } else {
+                    UpdateGameScore(++m_gamescore);
+                    m_gametime += 2.0f;
+                    m_wheel_rot_dest++;
+                    m_game_state = GameStateType.InGameRotation;
+                    InitQuantumEnvironment(UnityEngine.Random.value);
+                    ResetGrowthMeasures();
+                    m_audio_source.PlayOneShot(AudioInsertCable);
+                }
+
             } else {
-                UpdateGameScore(++m_gamescore);
-                m_wheel_rot_dest++;
-                m_game_state = GameStateType.InGameRotation;
-                m_audio_source.PlayOneShot(AudioInsertCable);
+    
+                if (result <= 0.5f) {
+                    m_wheel_explosion = 0.0f;
+                    m_game_state = GameStateType.InGameExplosion;
+                    m_audio_source.PlayOneShot(AudioFail);
+                } else {
+                    UpdateGameScore(++m_gamescore);
+                    m_gametime += 2.0f;
+                    m_wheel_rot_dest++;
+                    m_game_state = GameStateType.InGameRotation;
+                    InitQuantumEnvironment(UnityEngine.Random.value);
+                    ResetGrowthMeasures();
+                    m_audio_source.PlayOneShot(AudioInsertCable);
+                }
+
             }
         }
 
@@ -254,9 +309,6 @@ public class Game : MonoBehaviour
         UpdateWell(result.RightPopulation, result.RightWellPosition, m_growth_right);
         UpdateWell(result.LeftPopulation, result.LeftWellPosition, m_growth_left);
         UpdateWell(1f - (leftPop + rightPop), 0, m_growth_middle);
-
-        input.SetVibration(0, result.LeftPopulation, 1/60f);
-        input.SetVibration(1, result.RightPopulation, 1/60f);
     }
 
 
