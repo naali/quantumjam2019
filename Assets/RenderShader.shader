@@ -50,7 +50,7 @@ float iTime;
 int iFrame;
 vec2 iMouse = vec2(0, 0);
 /////////////////////////
-// SHADERTOY CODE:
+// SHADERTOY CODE: https://www.shadertoy.com/view/tsSGWt
 #ifndef UNITY_MODE
 vec2 mul2x2(mat2 m, vec2 p) { return m * p; }
 vec3 mul3x3(mat3 m, vec3 p) { return m * p; }
