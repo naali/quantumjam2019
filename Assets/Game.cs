@@ -98,6 +98,8 @@ public class Game : MonoBehaviour
         }
 
         if (input.StartPressed || input.FlipPressed) {
+            m_audio_source.PlayOneShot(AudioStart);
+
             InitQuantumEnvironment(UnityEngine.Random.value);
 
             MenuScreen.SetActive(false);
@@ -158,6 +160,7 @@ public class Game : MonoBehaviour
         }
 
         if (input.FlipPressed) {
+            m_audio_source.PlayOneShot(AudioFlipCable);
             m_plug_rot_dest = 1.0f - m_plug_rot_dest;
         }
 
@@ -168,10 +171,13 @@ public class Game : MonoBehaviour
             if (m_left_result + m_right_result > 0.5f) {
                 m_wheel_explosion = 0.0f;
                 m_game_state = GameStateType.InGameExplosion;
-            } else {
+                m_audio_source.PlayOneShot(AudioFail);
+            }
+            else {
                 UpdateGameScore(m_gamescore++);
                 m_wheel_rot_dest++;
                 m_game_state = GameStateType.InGameRotation;
+                m_audio_source.PlayOneShot(AudioInsertCable);
             }
         }
 
