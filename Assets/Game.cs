@@ -22,10 +22,18 @@ public class Game : MonoBehaviour
     public Material RenderMaterial;
     public InputHandler input;
 
+    private string[] m_quantun_machine_slurs = { 
+        "Quantum Socket wins.", 
+        "Yet another casualty.",
+        "There's no right way.",
+        "Trying makes it harder.",
+        "Did you try it the other way?"
+    };
+
     public int QuantumTimeSteps = 400;
     public int GrowthBufferSize = 10;
 
-    public float GameTime = 10.0f;
+    public float GameTime = 10.9f;
 
     private float m_time = 0.0f;
     private int m_frame_count = 0;
@@ -49,6 +57,7 @@ public class Game : MonoBehaviour
     private float m_gametime;
     private int m_gamescore;
 
+    private float m_endscreen_timer;
     private int m_step;
 
     private float m_left;
@@ -105,7 +114,15 @@ public class Game : MonoBehaviour
 
         if (m_wheel_explosion > 1.0f) {
             m_wheel_explosion = -1.0f;
-            m_game_state = GameStateType.InGame;
+//            m_game_state = GameStateType.InGame;
+
+            GameScreen.SetActive(false);
+            MenuScreen.SetActive(false);
+            EndScreen.SetActive(true);
+            EndScreenScoreText.text = "You plugged " + m_gamescore + " holes.\n" + m_quantun_machine_slurs[(int)Math.Floor(m_quantun_machine_slurs.Length * UnityEngine.Random.value)];
+            m_endscreen_timer = 2.0f;
+            m_game_state = GameStateType.GameOver;
+
         }
     }
 
@@ -141,7 +158,8 @@ public class Game : MonoBehaviour
             GameScreen.SetActive(false);
             MenuScreen.SetActive(false);
             EndScreen.SetActive(true);
-            EndScreenScoreText.text = "You plugged " + m_gamescore + " holes.\nQuantum Socket wins.";
+            EndScreenScoreText.text = "You plugged " + m_gamescore + " holes.\n" + m_quantun_machine_slurs[(int)Math.Floor(m_quantun_machine_slurs.Length * UnityEngine.Random.value)];
+            m_endscreen_timer = 2.0f;
             m_game_state = GameStateType.GameOver;
             return;
         }
@@ -158,7 +176,7 @@ public class Game : MonoBehaviour
                 m_wheel_explosion = 0.0f;
                 m_game_state = GameStateType.InGameExplosion;
             } else {
-                UpdateGameScore(m_gamescore++);
+                UpdateGameScore(++m_gamescore);
                 m_wheel_rot_dest++;
                 m_game_state = GameStateType.InGameRotation;
             }
@@ -176,6 +194,12 @@ public class Game : MonoBehaviour
 
     private void UpdateGameOver()
     {
+        m_endscreen_timer -= Time.deltaTime;
+
+        if (m_endscreen_timer > 0.0) {
+            return;
+        }
+
         if (input.FlipPressed || input.EscPressed) {
             EndScreen.SetActive(false);
             GameScreen.SetActive(false);
